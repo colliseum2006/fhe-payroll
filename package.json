@@ -1,0 +1,52 @@
+{
+  "name": "fhe-payroll",
+  "version": "0.1.0",
+  "description": "Confidential Salary Payroll System using Zama FHEVM",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "demo": "hardhat run scripts/demo.js",
+    "frontend": "hardhat run scripts/frontend-example.js",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "fhe",
+    "zama",
+    "confidential",
+    "payroll",
+    "salary",
+    "privacy"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.9",
+    "@nomicfoundation/hardhat-ethers": "^3.0.9",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.13",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.14",
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "chai": "^4.3.10",
+    "dotenv": "^17.2.0",
+    "ethers": "^6.8.0",
+    "hardhat": "^2.19.0",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.16",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@fhevm/solidity": "^0.7.0",
+    "@openzeppelin/contracts-confidential": "^0.2.0-rc.0",
+    "@zama-fhe/relayer-sdk": "^0.1.0"
+  }
+}
