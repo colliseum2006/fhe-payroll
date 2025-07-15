@@ -83,16 +83,10 @@ The system is built on:
 
 The Confidential Salary Token has been successfully deployed to the Sepolia testnet:
 
-- **Contract Address**: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
-- **Network**: Sepolia Testnet
 - **Block Explorer**: [Sepolia Etherscan](https://sepolia.etherscan.io/address/0x5FbDB2315678afecb367f032d93F642f64180aa3)
 - **Token Name**: Confidential Salary Token
 - **Token Symbol**: CST
 - **Decimals**: 6
-
-### **Contract Verification**
-
-The contract has been verified on Sepolia Etherscan and is publicly accessible for inspection and interaction.
 
 ### **Role Assignment**
 
