@@ -19,6 +19,7 @@ The system is built on:
 - **OpenZeppelin Confidential Contracts**: For the base confidential token functionality
 - **Role-based Access Control**: For secure permission management
 - **Hardhat**: For development and testing
+- **ethers.js**: For all blockchain and smart contract interactions (no viem)
 
 ## 📁 **Project Structure**
 
@@ -83,10 +84,16 @@ The system is built on:
 
 The Confidential Salary Token has been successfully deployed to the Sepolia testnet:
 
+- **Contract Address**: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
+- **Network**: Sepolia Testnet
 - **Block Explorer**: [Sepolia Etherscan](https://sepolia.etherscan.io/address/0x5FbDB2315678afecb367f032d93F642f64180aa3)
 - **Token Name**: Confidential Salary Token
 - **Token Symbol**: CST
 - **Decimals**: 6
+
+### **Contract Verification**
+
+The contract has been verified on Sepolia Etherscan and is publicly accessible for inspection and interaction.
 
 ### **Role Assignment**
 
@@ -109,7 +116,7 @@ You can interact with the deployed contract using:
 
 1. **Etherscan**: Direct interaction through the verified contract
 2. **Hardhat Console**: Connect to Sepolia and interact programmatically
-3. **Frontend Integration**: Use the provided frontend example scripts
+3. **Frontend Integration**: Use the provided frontend example scripts (all using ethers.js)
 
 ### **Environment Setup**
 
