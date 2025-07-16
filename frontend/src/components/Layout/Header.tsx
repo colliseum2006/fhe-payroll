@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserRole } from '../../types';
-import { usePayroll } from '../../services/payroll';
+import { useWallet } from '../../hooks/useWallet';
 import { 
   Wallet, 
   User, 
@@ -16,8 +16,7 @@ import { clsx } from 'clsx';
 import ThemeToggle from './ThemeToggle';
 
 const Header: React.FC = () => {
-  const payroll = usePayroll();
-  const { account, isConnected, isLoading, connect, disconnect } = payroll;
+  const { account, isConnected, isLoading, connect, disconnect } = useWallet();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
