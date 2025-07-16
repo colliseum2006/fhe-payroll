@@ -19,5 +19,73 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    
+    <!-- Check WebAssembly support -->
+    <script>
+      if (typeof WebAssembly === 'undefined') {
+        console.error('WebAssembly is not supported in this browser');
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;"><h2>Browser Not Supported</h2><p>This application requires WebAssembly support. Please use a modern browser like Chrome, Firefox, or Safari.</p></div>';
+      } else {
+        console.log('WebAssembly is supported');
+      }
+    </script>
+    
+    <!-- Load relayer SDK from CDN with proper error handling -->
+    <script>
+      function loadRelayerSDK() {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          // Try a different CDN URL that might be more reliable
+          script.src = 'https://unpkg.com/@zama-fhe/relayer-sdk@0.1.0/dist/relayer-sdk-js.umd.cjs';
+          script.type = 'text/javascript';
+          
+          script.onload = () => {
+            console.log('FHEVM SDK loaded successfully from unpkg CDN');
+            // Wait a bit for WebAssembly modules to initialize
+            setTimeout(() => {
+              if (window.relayerSDK) {
+                console.log('SDK available on window object');
+                resolve();
+              } else {
+                reject(new Error('SDK not available after loading'));
+              }
+            }, 2000);
+          };
+          
+          script.onerror = () => {
+            console.log('Unpkg CDN failed, trying Zama CDN...');
+            // Try Zama CDN as fallback
+            const altScript = document.createElement('script');
+            altScript.src = 'https://cdn.zama.ai/relayer-sdk-js/0.1.0/relayer-sdk-js.umd.cjs';
+            altScript.type = 'text/javascript';
+            
+            altScript.onload = () => {
+              console.log('FHEVM SDK loaded successfully from Zama CDN');
+              setTimeout(() => {
+                if (window.relayerSDK) {
+                  console.log('SDK available on window object');
+                  resolve();
+                } else {
+                  reject(new Error('SDK not available after loading from Zama CDN'));
+                }
+              }, 2000);
+            };
+            
+            altScript.onerror = () => {
+              reject(new Error('Both CDNs failed to load'));
+            };
+            
+            document.head.appendChild(altScript);
+          };
+          
+          document.head.appendChild(script);
+        });
+      }
+      
+      // Load the SDK
+      loadRelayerSDK().catch(error => {
+        console.error('Failed to load FHEVM SDK:', error);
+      });
+    </script>
   </body>
 </html> 
