@@ -5,7 +5,7 @@ import {
   SepoliaConfig,
 } from '@zama-fhe/relayer-sdk/bundle';
 import type { EIP712, FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
-import { getAddress } from 'viem';
+import { ethers } from 'ethers';
 import { getContractAddress } from '../config/contracts';
 
 export type FhevmContextType = {
@@ -147,7 +147,7 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
       kp!.publicKey,
       s,
       [contractAddress],
-      getAddress(account),
+      ethers.getAddress(account),
       timestamp!,
       durationDays,
     );
