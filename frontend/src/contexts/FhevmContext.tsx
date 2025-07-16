@@ -1,12 +1,17 @@
 import { useEffect, useState, useContext, createContext, type ReactNode } from 'react';
-import {
-  initSDK,
-  createInstance,
-  SepoliaConfig,
-} from '@zama-fhe/relayer-sdk/bundle';
-import type { EIP712, FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 import { ethers } from 'ethers';
-import { getContractAddress } from '../config/contracts';
+import { getContractAddress, getRpcUrl } from '../config/contracts';
+
+// Declare the relayerSDK property on window
+declare global {
+  interface Window {
+    relayerSDK?: any;
+  }
+}
+
+// Define types locally to avoid bundle.js import issues
+export type EIP712 = any;
+export type FhevmInstance = any;
 
 export type FhevmContextType = {
   instance: FhevmInstance;
@@ -58,13 +63,79 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
         if (typeof WebAssembly === 'undefined') {
           throw new Error('WebAssembly is not supported in this browser');
         }
+
+        // Wait for the relayer SDK to be loaded from CDN
+        let attempts = 0;
+        const maxAttempts = 30; // Increased to 30 attempts
+        while (!window.relayerSDK && attempts < maxAttempts) {
+          console.log(`Waiting for relayer SDK to load... attempt ${attempts + 1}/${maxAttempts}`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+
+        // Check if the relayer SDK is loaded
+        if (!window.relayerSDK) {
+          console.error('Relayer SDK not found on window object:', window.relayerSDK);
+          throw new Error('Relayer SDK not loaded. Please refresh the page.');
+        }
+
+        console.log('Relayer SDK found, initializing...');
         
-        await initSDK();
+        // Wait a bit more for WebAssembly modules to be fully loaded
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
-        const i = await createInstance({
-          ...SepoliaConfig,
-          network: window.ethereum,
-        });
+        // Check if SDK functions are available
+        if (!window.relayerSDK.initSDK) {
+          throw new Error('initSDK function not available on relayerSDK');
+        }
+        
+        try {
+          console.log('Calling initSDK...');
+          // Use the SDK function directly from window object
+          await window.relayerSDK.initSDK();
+          console.log('SDK initialized successfully using window.relayerSDK.initSDK');
+        } catch (initError) {
+          console.error('initSDK failed, retrying...', initError);
+          // Wait a bit more and try again
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          console.log('Retrying initSDK...');
+          await window.relayerSDK.initSDK();
+          console.log('SDK initialized successfully on retry using window.relayerSDK.initSDK');
+        }
+        
+        // Get and log the RPC URL
+        const rpcUrl = getRpcUrl();
+        console.log('Using RPC URL:', rpcUrl);
+        
+        // Use explicit configuration since SepoliaConfig might not be available
+        const config = {
+          aclContractAddress: "0x687820221192C5B662b25367F70076A37bc79b6c",
+          kmsContractAddress: "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC",
+          inputVerifierContractAddress: "0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4",
+          verifyingContractAddressDecryption: "0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1",
+          verifyingContractAddressInputVerification: "0x7048C39f048125eDa9d678AEbaDfB22F7900a29F",
+          chainId: 11155111,
+          gatewayChainId: 55815,
+          network: rpcUrl,
+          relayerUrl: "https://relayer.testnet.zama.cloud",
+        };
+        
+        // Add more debugging for WebAssembly
+        console.log('WebAssembly available:', typeof WebAssembly !== 'undefined');
+        console.log('WebAssembly.instantiate available:', typeof WebAssembly.instantiate !== 'undefined');
+        console.log('window.relayerSDK keys:', window.relayerSDK ? Object.keys(window.relayerSDK) : 'undefined');
+        
+        console.log('Creating FHEVM instance with config:', config);
+        
+        let i;
+        try {
+          // Use the SDK function directly from window object
+          i = await window.relayerSDK.createInstance(config);
+          console.log('FHEVM instance created successfully using window.relayerSDK.createInstance');
+        } catch (createError) {
+          console.error('createInstance failed:', createError);
+          throw createError;
+        }
         
         if (!keypair || !eip712) {
           setSignature(undefined);
@@ -95,6 +166,8 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
             errorMessage = 'Public key error. Please check your network connection and try again.';
           } else if (e.message.includes('WebAssembly is not supported')) {
             errorMessage = 'Your browser does not support WebAssembly. Please use a modern browser like Chrome, Firefox, or Safari.';
+          } else if (e.message.includes('Relayer SDK not loaded')) {
+            errorMessage = 'FHEVM SDK not loaded. Please refresh the page and try again.';
           } else {
             errorMessage = e.message;
           }
@@ -122,15 +195,22 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
     
     let s = signature;
     let timestamp = startTimestamp;
-    let kp = keypair;
+    let currentKeypair = keypair;
     
     if (!s) {
       timestamp = Math.floor(Date.now() / 1000) - 1000;
       setStartTimestamp(timestamp);
-      kp = instance.generateKeypair();
-      setKeypair(kp);
+      currentKeypair = instance.generateKeypair();
+      setKeypair(currentKeypair);
+      
+      // Type guard to ensure currentKeypair is defined
+      if (!currentKeypair) {
+        console.error('Failed to generate keypair');
+        return;
+      }
+      
       const eip = instance.createEIP712(
-        kp.publicKey,
+        currentKeypair.publicKey,
         [contractAddress],
         timestamp,
         durationDays,
@@ -141,10 +221,16 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
       s = signature;
     }
     
+    // At this point, currentKeypair should be defined
+    if (!currentKeypair) {
+      console.error('Keypair is undefined after generation');
+      return;
+    }
+    
     const r = await instance.userDecrypt(
       [{ handle, contractAddress }],
-      kp!.privateKey,
-      kp!.publicKey,
+      (currentKeypair as { publicKey: string; privateKey: string }).privateKey,
+      (currentKeypair as { publicKey: string; privateKey: string }).publicKey,
       s,
       [contractAddress],
       ethers.getAddress(account),
