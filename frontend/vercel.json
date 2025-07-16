@@ -3,5 +3,41 @@
   "outputDirectory": "build",
   "framework": "create-react-app",
   "installCommand": "npm install",
-  "devCommand": "npm start"
+  "devCommand": "npm start",
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/logo192.png",
+      "dest": "/logo192.png"
+    },
+    {
+      "src": "/logo512.png",
+      "dest": "/logo512.png"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_NETWORK": "SEPOLIA",
+    "REACT_APP_RPC_URL": "https://sepolia.infura.io/v3/645b161c447c49d4bbed402076e9ad0b",
+    "REACT_APP_CONTRACT_ADDRESS": "0xf10574209A7c856887f672fAE3Eb3d5b34ED7C9c"
+  },
+  "functions": {
+    "build/static/js/*.js": {
+      "maxDuration": 30
+    }
+  }
 } 
