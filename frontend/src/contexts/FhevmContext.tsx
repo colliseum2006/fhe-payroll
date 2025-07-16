@@ -1,13 +1,7 @@
 import { useEffect, useState, useContext, createContext, type ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { getContractAddress, getRpcUrl } from '../config/contracts';
-
-// Declare the relayerSDK property on window
-declare global {
-  interface Window {
-    relayerSDK?: any;
-  }
-}
+import { useFhevmSDK } from '../hooks/useFhevmSDK';
 
 // Define types locally to avoid bundle.js import issues
 export type EIP712 = any;
@@ -52,55 +46,47 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
   const durationDays = 365;
   const contractAddress = getContractAddress();
 
-  // Initialize FHEVM SDK
+  // Use the new FHEVM SDK hook
+  const { sdk, isLoading: sdkLoading, error: sdkError } = useFhevmSDK();
+
+  // Initialize FHEVM instance when SDK is ready and account is available
   useEffect(() => {
     const initializeFHEVM = async () => {
       try {
         setIsInitializing(true);
         setError(undefined);
-        
+
         // Check if WebAssembly is supported
         if (typeof WebAssembly === 'undefined') {
           throw new Error('WebAssembly is not supported in this browser');
         }
 
-        // Wait for the relayer SDK to be loaded from CDN
-        let attempts = 0;
-        const maxAttempts = 30; // Increased to 30 attempts
-        while (!window.relayerSDK && attempts < maxAttempts) {
-          console.log(`Waiting for relayer SDK to load... attempt ${attempts + 1}/${maxAttempts}`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
+        // Wait for SDK to be loaded
+        if (sdkLoading) {
+          return;
         }
 
-        // Check if the relayer SDK is loaded
-        if (!window.relayerSDK) {
-          console.error('Relayer SDK not found on window object:', window.relayerSDK);
-          throw new Error('Relayer SDK not loaded. Please refresh the page.');
+        if (sdkError) {
+          throw new Error(sdkError);
         }
 
-        console.log('Relayer SDK found, initializing...');
-        
-        // Wait a bit more for WebAssembly modules to be fully loaded
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Check if SDK functions are available
-        if (!window.relayerSDK.initSDK) {
-          throw new Error('initSDK function not available on relayerSDK');
+        if (!sdk) {
+          throw new Error('FHEVM SDK not available');
         }
+
+        console.log('Initializing FHEVM with SDK...');
         
         try {
           console.log('Calling initSDK...');
-          // Use the SDK function directly from window object
-          await window.relayerSDK.initSDK();
-          console.log('SDK initialized successfully using window.relayerSDK.initSDK');
+          await sdk.initSDK();
+          console.log('SDK initialized successfully');
         } catch (initError) {
           console.error('initSDK failed, retrying...', initError);
           // Wait a bit more and try again
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          await new Promise(resolve => setTimeout(resolve, 3000));
           console.log('Retrying initSDK...');
-          await window.relayerSDK.initSDK();
-          console.log('SDK initialized successfully on retry using window.relayerSDK.initSDK');
+          await sdk.initSDK();
+          console.log('SDK initialized successfully on retry');
         }
         
         // Get and log the RPC URL
@@ -120,18 +106,12 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
           relayerUrl: "https://relayer.testnet.zama.cloud",
         };
         
-        // Add more debugging for WebAssembly
-        console.log('WebAssembly available:', typeof WebAssembly !== 'undefined');
-        console.log('WebAssembly.instantiate available:', typeof WebAssembly.instantiate !== 'undefined');
-        console.log('window.relayerSDK keys:', window.relayerSDK ? Object.keys(window.relayerSDK) : 'undefined');
-        
         console.log('Creating FHEVM instance with config:', config);
         
         let i;
         try {
-          // Use the SDK function directly from window object
-          i = await window.relayerSDK.createInstance(config);
-          console.log('FHEVM instance created successfully using window.relayerSDK.createInstance');
+          i = await sdk.createInstance(config);
+          console.log('FHEVM instance created successfully');
         } catch (createError) {
           console.error('createInstance failed:', createError);
           throw createError;
@@ -143,6 +123,13 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
           setStartTimestamp(timestamp);
           const kp = i.generateKeypair();
           setKeypair(kp);
+          
+          // Type guard to ensure currentKeypair is defined
+          if (!kp) {
+            console.error('Failed to generate keypair');
+            return;
+          }
+          
           const eip = i.createEIP712(
             kp.publicKey,
             [contractAddress],
@@ -178,13 +165,13 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
       }
     };
 
-    // Only initialize if we have an account
-    if (account) {
+    // Only initialize if we have an account and SDK is ready
+    if (account && !sdkLoading) {
       initializeFHEVM();
-    } else {
+    } else if (!account) {
       setIsInitializing(false);
     }
-  }, [account]); // Run when account changes
+  }, [account, sdk, sdkLoading, sdkError]); // Run when account or SDK state changes
 
   // Decrypt function for getting results from contract
   const decrypt = async (
@@ -240,25 +227,25 @@ export function FhevmProvider({ children, account }: FhevmProviderProps) {
     return r[handle] as bigint;
   };
 
-  if (isInitializing) {
+  if (isInitializing || sdkLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">
-            {account ? 'Initializing FHEVM...' : 'Please connect your wallet to continue'}
+            {sdkLoading ? 'Loading FHEVM SDK...' : account ? 'Initializing FHEVM...' : 'Please connect your wallet to continue'}
           </p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || sdkError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md mx-auto p-6 bg-red-50 border border-red-200 rounded-lg">
           <h3 className="text-lg font-semibold text-red-800 mb-2">FHEVM Initialization Failed</h3>
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">{error || sdkError}</p>
           <div className="text-sm text-gray-600 mb-4">
             <p>Common solutions:</p>
             <ul className="text-left mt-2 space-y-1">
